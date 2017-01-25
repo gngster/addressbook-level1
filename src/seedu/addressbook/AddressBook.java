@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Scanner;
@@ -133,6 +134,9 @@ public class AddressBook {
     private static final String COMMAND_EXIT_DESC = "Exits the program.";
     private static final String COMMAND_EXIT_EXAMPLE = COMMAND_EXIT_WORD;
 
+    private static final String COMMAND_SORT_WORD = "sort";
+	private static final String COMMAND_EDIT_WORD = "edit";
+
     private static final String DIVIDER = "===================================================";
 
 
@@ -182,6 +186,7 @@ public class AddressBook {
      * List of all persons in the address book.
      */
     private static final ArrayList<String[]> ALL_PERSONS = new ArrayList<>();
+
 
     /**
      * Stores the most recent list of persons shown to the user as a result of a user command.
@@ -383,6 +388,10 @@ public class AddressBook {
             return getUsageInfoForAllCommands();
         case COMMAND_EXIT_WORD:
             executeExitProgramRequest();
+        case COMMAND_SORT_WORD:
+        	executeSortPersons(commandArgs);
+        case COMMAND_EDIT_WORD:
+        	executeEditPerson(commandArgs);
         default:
             return getMessageForInvalidCommandInput(commandType, getUsageInfoForAllCommands());
         }
@@ -429,8 +438,47 @@ public class AddressBook {
         addPersonToAddressBook(personToAdd);
         return getMessageForSuccessfulAddPerson(personToAdd);
     }
-
+    
     /**
+     * Executes sorting of ALL_PERSONS
+     * @param commandArgs
+     */
+    private static void executeSortPersons(String commandArgs){
+    	sortPersons(ALL_PERSONS);
+    	for(String[] person: ALL_PERSONS){
+    		System.out.println(person);
+    	}
+    }
+    /**
+     * Allows for editing of properties
+     * @param oldName
+     * @param newName
+     */
+    private static void executeEditPerson(String commandArgs){
+    	int propertyIndex;
+    	String[] arr = commandArgs.split(" "); 
+    	String name = arr[0];
+    	String thingToEdit = arr[1];
+    	String newString  = arr[2];
+    	if(thingToEdit.equals("name")){
+    		propertyIndex = PERSON_DATA_INDEX_NAME;
+    	}
+    	if(thingToEdit.equals("email")){
+    		propertyIndex = PERSON_DATA_INDEX_EMAIL;
+    	}
+    	else{
+    		propertyIndex = PERSON_DATA_INDEX_PHONE;
+    	}
+    	for(int i=0; i< ALL_PERSONS.size(); i++){
+    	if(name.equals(ALL_PERSONS.get(i)[PERSON_DATA_INDEX_NAME])){
+    		editPerson(i, newString, propertyIndex);
+    		break;
+    	}
+    	}
+    }
+  
+
+	/**
      * Constructs a feedback message for a successful add person command execution.
      *
      * @see #executeAddPerson(String)
@@ -484,14 +532,23 @@ public class AddressBook {
      */
     private static ArrayList<String[]> getPersonsWithNameContainingAnyKeyword(Collection<String> keywords) {
         final ArrayList<String[]> matchedPersons = new ArrayList<>();
+        ArrayList<String> upperCaseKeywords = new ArrayList<>();
         for (String[] person : getAllPersonsInAddressBook()) {
             final Set<String> wordsInName = new HashSet<>(splitByWhitespace(getNameFromPerson(person)));
-            if (!Collections.disjoint(wordsInName, keywords)) {
+            ArrayList<String> upperCaseWords = new ArrayList<String>();
+            keywords
+            .parallelStream()
+            .forEach(k -> upperCaseKeywords.add(k.toUpperCase()));
+            wordsInName
+            .parallelStream()
+            .forEach(word -> upperCaseWords.add(word));
+           if (!Collections.disjoint(upperCaseWords, upperCaseKeywords)) {
                 matchedPersons.add(person);
             }
         }
         return matchedPersons;
     }
+
 
     /**
      * Deletes person identified using last displayed index.
@@ -786,6 +843,15 @@ public class AddressBook {
         ALL_PERSONS.add(person);
         savePersonsToFile(getAllPersonsInAddressBook(), storageFilePath);
     }
+    
+    private static void sortPersons(ArrayList<String[]> allPersons){
+    	allPersons.sort(Comparator.comparing(a -> a[1]));
+    }
+    
+    private static void editPerson(int i, String newString, int propertyIndex) {
+    	ALL_PERSONS.get(i)[propertyIndex] = newString;
+		
+	}
 
     /**
      * Deletes the specified person from the addressbook if it is inside. Saves any changes to storage file.
